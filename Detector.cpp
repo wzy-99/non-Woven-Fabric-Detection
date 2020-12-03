@@ -22,15 +22,16 @@ void Detector::set(Param& param)
 	this->param = param;
 }
 
-std::vector<Detecion>& Detector::detect(cv::Mat& img)
+std::vector<Detection>& Detector::detect(cv::Mat& img)
 {
 	this->img = img;
+	this->detections = std::vector<Detection>();
 
 	segmenting();
 	searching();
 	sorting();
 
-	return this->detection;
+	return this->detections;
 }
 
 void Detector::segmenting()
@@ -49,7 +50,7 @@ void Detector::segmenting()
 
 void Detector::searching()
 {
-	uint16_t label = 0;
+	uint16_t label = 1;
 	for (uint16_t i = 0; i < this->binary.rows; i++)
 	{
 		for (uint16_t j = 0; j < this->binary.cols; j++)
@@ -57,6 +58,7 @@ void Detector::searching()
 			if (this->binary.at<uchar>(i, j) == DIRTY)
 			{
 				growing(i, j, label);
+				label = label + 1;
 			}
 		}
 	}
@@ -80,39 +82,39 @@ void Detector::growing(uint16_t y, uint16_t x, uint16_t label)
 		this->binary.at<uchar>(point.y, point.x) = VISIT;
 
 		// 开辟空间，并记录该点
-		while (this->detection.size() < label)
+		while (this->detections.size() < label)
 		{
-			this->detection.push_back(Detecion());
+			this->detections.push_back(Detection());
 		}
-		this->detection[label].area.push_back(point);
+		this->detections[label-1].area.push_back(point);
 
 		// 判断
 		if (point.x > 0) //left
 		{
 			if (this->binary.at<uchar>(point.y, point.x - 1) == DIRTY)
 			{
-				points.push(Point(y, x - 1));
+				points.push(Point(point.y, point.x - 1));
 			}
 		}
 		if (point.x < max_x) //right
 		{
 			if (this->binary.at<uchar>(point.y, point.x + 1) == DIRTY)
 			{
-				points.push(Point(y, x + 1));
+				points.push(Point(point.y, point.x + 1));
 			}
 		}
 		if (point.y > 0) //up
 		{
 			if (this->binary.at<uchar>(point.y - 1, point.x) == DIRTY)
 			{
-				points.push(Point(y - 1, x));
+				points.push(Point(point.y - 1, point.x));
 			}
 		}
 		if (point.y < 0) //down
 		{
 			if (this->binary.at<uchar>(point.y + 1, point.x) == DIRTY)
 			{
-				points.push(Point(y + 1, x));
+				points.push(Point(point.y + 1, point.x));
 			}
 		}
 	}
@@ -120,25 +122,25 @@ void Detector::growing(uint16_t y, uint16_t x, uint16_t label)
 
 void Detector::sorting()
 {
-	for (std::vector<Detecion>::iterator iter = this->detection.begin(); iter != this->detection.end(); iter++)
+	for (std::vector<Detection>::iterator iter = this->detections.begin(); iter != this->detections.end(); iter++)
 	{
 		if ((*iter).area.empty())
 		{
-			this->detection.erase(iter);
+			this->detections.erase(iter);
 		}
 		else if((*iter).area.size() < this->param.dirty_block_size)
 		{
-			this->detection.erase(iter);
+			this->detections.erase(iter);
 		}
 		else
 		{
 			(*iter).measure = (*iter).area.size();
 
-			uint16_t min_x = this->binary.rows;
-			uint16_t min_y = this->binary.cols;
+			uint16_t min_x = this->binary.cols;
+			uint16_t min_y = this->binary.rows;
 			uint16_t max_x = 0;
 			uint16_t max_y = 0;
-			for (std::vector<Point>::iterator it = (*iter).area.begin(); it != (*iter).area.end(); iter++)
+			for (std::vector<Point>::iterator it = (*iter).area.begin(); it != (*iter).area.end(); it++)
 			{
 				if ((*it).x < min_x)
 				{

@@ -38,38 +38,11 @@ struct Param
 };
 
 /**
-	@class:		检测结果
-	@describe:	包括类型、面积、长宽比、区域。
-**/
-struct Detecion
-{
-	Detecion()
-	{
-		this->type = 0;
-		this->measure = 0;
-		this->aspect = 0.0;
-		this->width = 0;
-		this->height = 0;
-	}
-	uint16_t type;								// 类型
-	uint16_t measure;							// 面积
-	uint16_t width;								// 宽度
-	uint16_t height;							// 长度
-	double aspect;								// 长宽比
-	std::vector<Point> area;					// 连通域
-};
-
-/**
 	@class:		二维点
 	@describe:	记录Y和X坐标。
 **/
 struct Point
 {
-	Point(Point& point)
-	{
-		this->x = point.x;
-		this->y = point.y;
-	};
 	Point(uint16_t y, uint16_t x)
 	{
 		this->x = x;
@@ -77,6 +50,29 @@ struct Point
 	};
 	uint16_t x;
 	uint16_t y;
+};
+
+/**
+	@class:		检测结果
+	@describe:	包括类型、面积、长宽比、区域。
+**/
+struct Detection
+{
+	Detection()
+	{
+		this->type = 0;
+		this->measure = 0;
+		this->aspect = 0.0;
+		this->width = 0;
+		this->height = 0;
+		this->area = std::vector<Point>();
+	}
+	uint16_t type;								// 类型
+	uint16_t measure;							// 面积
+	uint16_t width;								// 宽度
+	uint16_t height;							// 长度
+	double aspect;								// 长宽比
+	std::vector<Point> area;					// 连通域
 };
 
 /** 
@@ -93,7 +89,7 @@ public:
 
 	// interface fuction
 	void set(Param& param);
-	std::vector<Detecion>& detect(cv::Mat& img);
+	std::vector<Detection>& detect(cv::Mat& img);
 
 private:
 	// config variable
@@ -102,7 +98,7 @@ private:
 	// local variable
 	cv::Mat img;
 	cv::Mat binary;
-	std::vector<Detecion> detection;
+	std::vector<Detection> detections;
 
 	// inner fuction
 	void segmenting();									// 分割图像
