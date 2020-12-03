@@ -122,15 +122,15 @@ void Detector::growing(uint16_t y, uint16_t x, uint16_t label)
 
 void Detector::sorting()
 {
-	for (std::vector<Detection>::iterator iter = this->detections.begin(); iter != this->detections.end(); iter++)
+	for (std::vector<Detection>::iterator iter = this->detections.begin(); iter != this->detections.end();)
 	{
 		if ((*iter).area.empty())
 		{
-			this->detections.erase(iter);
+			iter = this->detections.erase(iter); //在这里获取下一个元素
 		}
 		else if((*iter).area.size() < this->param.dirty_block_size)
 		{
-			this->detections.erase(iter);
+			iter = this->detections.erase(iter); //在这里获取下一个元素
 		}
 		else
 		{
@@ -172,6 +172,7 @@ void Detector::sorting()
 			{
 				(*iter).type = DUST;
 			}
+			++iter;
 		}
 	}
 }
