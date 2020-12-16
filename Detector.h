@@ -23,27 +23,17 @@
 **/
 struct Param
 {
-	uint16_t segment_block_size;
-	uint16_t segment_constant;
-	uint16_t growing_block_size;
-	uint16_t picking_block_size;
-	double_t picking_thres;
-	uint16_t dirty_block_size;
-	double_t dirty_aspect_thres;
-	double_t canny_thres_1;
-	double_t canny_thres_2;
-	uint16_t close_block_size;
-	uint16_t close_iteration;
+	uint16_t dirty_block_size;		// 污染物的大小阈值
+	double_t dirty_aspect_thres;	// 污染物的长宽比阈值
+	double_t canny_thres_1;			// canny算子的阈值1
+	double_t canny_thres_2;			// canny算子的阈值2
+	uint16_t close_block_size;		// 闭运算核大小
+	uint16_t close_iteration;		// 闭运算迭代次数
 
 	void operator=(const Param& param)
 	{
-		this->segment_block_size = param.segment_block_size;
-		this->segment_constant = param.segment_constant;
-		this->growing_block_size = param.growing_block_size;
 		this->dirty_block_size = param.dirty_block_size;
 		this->dirty_aspect_thres = param.dirty_aspect_thres;
-		this->picking_block_size = param.picking_block_size;
-		this->picking_thres = param.picking_thres;
 		this->canny_thres_1 = param.canny_thres_1;
 		this->canny_thres_2 = param.canny_thres_2;
 		this->close_block_size = param.close_block_size;
@@ -101,6 +91,9 @@ struct Detection
 class Detector
 {
 public:
+	// config variable
+	Param param;
+
 	// class base fuction
 	Detector();
 	Detector(Param& param);
@@ -114,9 +107,6 @@ public:
 	cv::Mat& get_binary();
 
 private:
-	// config variable
-	Param param;
-
 	// local variable
 	cv::Mat img;
 	cv::Mat gray;
@@ -125,11 +115,8 @@ private:
 
 	// inner fuction
 	void segmenting();									// 分割图像
-	void picking(uint16_t, uint16_t);					// 像素采样
 	void searching();									// 搜索种子点
 	void growing(uint16_t, uint16_t, uint16_t);			// 区域生长
-	void researching();									// 
-	void regrowing();
 	void sorting();										// 结果分类
 };
 

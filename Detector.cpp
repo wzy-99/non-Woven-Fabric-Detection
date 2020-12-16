@@ -39,22 +39,6 @@ void Detector::segmenting()
 {
 	cv::cvtColor(this->img, this->gray, cv::COLOR_BGR2GRAY);
 
-	//cv::adaptiveThreshold(this->gray,
-	//	this->binary,
-	//	255,
-	//	cv::ADAPTIVE_THRESH_MEAN_C,
-	//	cv::THRESH_BINARY,
-	//	this->param.segment_block_size,
-	//	this->param.segment_constant);
-
-	//for (uint16_t i = 0; i < this->binary.rows; i++)
-	//{
-	//	for (uint16_t j = 0; j < this->binary.cols; j++)
-	//	{
-	//		picking(i, j);
-	//	}
-	//}
-
 	cv::Mat canny(this->gray.rows, this->gray.cols, this->gray.type());
 
 	cv::Canny(this->gray,
@@ -71,53 +55,6 @@ void Detector::segmenting()
 		this->param.close_iteration);
 }
 
-void Detector::picking(uint16_t y, uint16_t x)
-{
-	const uint16_t max_y = this->gray.rows - 1;
-	const uint16_t max_x = this->gray.cols - 1;
-
-	uint16_t sum = 0;
-	uint16_t count = 0;
-	double_t mean = 0.0;
-	for (uint16_t i = y - this->param.picking_block_size; i <= y + this->param.picking_block_size; i++)
-	{
-		for (uint16_t j = x - this->param.picking_block_size; j <= x + this->param.picking_block_size; j++)
-		{
-			// 如果超出图像范围
-			if (i > max_y || j > max_x) // 如果为负数，因为数据为非负类型，结果仍然很大。
-			{
-				continue;
-			}
-			else
-			{
-				// 方式 1
-				//sum = sum + this->gray.at<uchar>(i, j);
-				//count = count + 1;
-
-				// 方式 2
-				if (i == y && j == x)  // 如果是中心点
-				{
-					continue;
-				}
-				else
-				{
-					sum = sum + this->gray.at<uchar>(i, j);
-					count = count + 1;
-				}
-			}
-		}
-	}
-
-	mean = (double_t)sum / (double_t)count;
-	if (mean - this->gray.at<uchar>(y, x) > this->param.picking_thres)
-	{
-		this->binary.at<uchar>(y, x) = 0;
-	}
-	else
-	{
-		this->binary.at<uchar>(y, x) = 255;
-	}
-}
 
 void Detector::searching()
 {
