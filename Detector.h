@@ -9,8 +9,8 @@
 #include <stack>
 #include <opencv2/core.hpp>
 
-#define CLEAN	255
-#define DIRTY	0
+#define CLEAN	0
+#define DIRTY	255
 #define VISIT	127
 
 #define DUST	1
@@ -25,15 +25,29 @@ struct Param
 {
 	uint16_t segment_block_size;
 	uint16_t segment_constant;
+	uint16_t growing_block_size;
+	uint16_t picking_block_size;
+	double_t picking_thres;
 	uint16_t dirty_block_size;
-	double dirty_aspect_thres;
+	double_t dirty_aspect_thres;
+	double_t canny_thres_1;
+	double_t canny_thres_2;
+	uint16_t close_block_size;
+	uint16_t close_iteration;
 
 	void operator=(const Param& param)
 	{
 		this->segment_block_size = param.segment_block_size;
 		this->segment_constant = param.segment_constant;
+		this->growing_block_size = param.growing_block_size;
 		this->dirty_block_size = param.dirty_block_size;
 		this->dirty_aspect_thres = param.dirty_aspect_thres;
+		this->picking_block_size = param.picking_block_size;
+		this->picking_thres = param.picking_thres;
+		this->canny_thres_1 = param.canny_thres_1;
+		this->canny_thres_2 = param.canny_thres_2;
+		this->close_block_size = param.close_block_size;
+		this->close_iteration = param.close_iteration;
 	}
 };
 
@@ -65,13 +79,18 @@ struct Detection
 		this->aspect = 0.0;
 		this->width = 0;
 		this->height = 0;
+		this->xmin = 0;
+		this->xmax = 0;
+		this->ymin = 0;
+		this->ymax = 0;
 		this->area = std::vector<Point>();
 	}
 	uint16_t type;								// 类型
 	uint16_t measure;							// 面积
 	uint16_t width;								// 宽度
 	uint16_t height;							// 长度
-	double aspect;								// 长宽比
+	uint16_t xmin, xmax, ymin, ymax;			// 左上右下
+	double_t aspect;							// 长宽比
 	std::vector<Point> area;					// 连通域
 };
 
@@ -89,7 +108,10 @@ public:
 
 	// interface fuction
 	void set(Param& param);
-	std::vector<Detection>& detect(cv::Mat& img);
+	std::vector<Detection>& detect(cv::Mat&);
+
+	// get data
+	cv::Mat& get_binary();
 
 private:
 	// config variable
@@ -97,13 +119,17 @@ private:
 
 	// local variable
 	cv::Mat img;
+	cv::Mat gray;
 	cv::Mat binary;
 	std::vector<Detection> detections;
 
 	// inner fuction
 	void segmenting();									// 分割图像
+	void picking(uint16_t, uint16_t);					// 像素采样
 	void searching();									// 搜索种子点
 	void growing(uint16_t, uint16_t, uint16_t);			// 区域生长
+	void researching();									// 
+	void regrowing();
 	void sorting();										// 结果分类
 };
 

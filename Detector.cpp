@@ -25,6 +25,7 @@ void Detector::set(Param& param)
 std::vector<Detection>& Detector::detect(cv::Mat& img)
 {
 	this->img = img;
+	this->binary= cv::Mat(img.rows, img.cols, CV_8UC1);
 	this->detections = std::vector<Detection>();
 
 	segmenting();
@@ -36,16 +37,86 @@ std::vector<Detection>& Detector::detect(cv::Mat& img)
 
 void Detector::segmenting()
 {
-	cv::Mat gray;
-	cv::cvtColor(this->img, gray, cv::COLOR_BGR2GRAY);
+	cv::cvtColor(this->img, this->gray, cv::COLOR_BGR2GRAY);
 
-	cv::adaptiveThreshold(gray,
-		this->binary,
-		255,
-		cv::ADAPTIVE_THRESH_MEAN_C,
-		cv::THRESH_BINARY,
-		this->param.segment_block_size,
-		this->param.segment_constant);
+	//cv::adaptiveThreshold(this->gray,
+	//	this->binary,
+	//	255,
+	//	cv::ADAPTIVE_THRESH_MEAN_C,
+	//	cv::THRESH_BINARY,
+	//	this->param.segment_block_size,
+	//	this->param.segment_constant);
+
+	//for (uint16_t i = 0; i < this->binary.rows; i++)
+	//{
+	//	for (uint16_t j = 0; j < this->binary.cols; j++)
+	//	{
+	//		picking(i, j);
+	//	}
+	//}
+
+	cv::Mat canny(this->gray.rows, this->gray.cols, this->gray.type());
+
+	cv::Canny(this->gray,
+		canny,
+		param.canny_thres_1,
+		param.canny_thres_2);
+
+	cv::Mat close_kernel = cv::getStructuringElement(cv::MORPH_RECT,
+		cv::Size(param.close_block_size, param.close_block_size));
+	cv::morphologyEx(canny, this->binary,
+		cv::MORPH_CLOSE,
+		close_kernel,
+		cv::Point(-1, -1),
+		this->param.close_iteration);
+}
+
+void Detector::picking(uint16_t y, uint16_t x)
+{
+	const uint16_t max_y = this->gray.rows - 1;
+	const uint16_t max_x = this->gray.cols - 1;
+
+	uint16_t sum = 0;
+	uint16_t count = 0;
+	double_t mean = 0.0;
+	for (uint16_t i = y - this->param.picking_block_size; i <= y + this->param.picking_block_size; i++)
+	{
+		for (uint16_t j = x - this->param.picking_block_size; j <= x + this->param.picking_block_size; j++)
+		{
+			// 如果超出图像范围
+			if (i > max_y || j > max_x) // 如果为负数，因为数据为非负类型，结果仍然很大。
+			{
+				continue;
+			}
+			else
+			{
+				// 方式 1
+				//sum = sum + this->gray.at<uchar>(i, j);
+				//count = count + 1;
+
+				// 方式 2
+				if (i == y && j == x)  // 如果是中心点
+				{
+					continue;
+				}
+				else
+				{
+					sum = sum + this->gray.at<uchar>(i, j);
+					count = count + 1;
+				}
+			}
+		}
+	}
+
+	mean = (double_t)sum / (double_t)count;
+	if (mean - this->gray.at<uchar>(y, x) > this->param.picking_thres)
+	{
+		this->binary.at<uchar>(y, x) = 0;
+	}
+	else
+	{
+		this->binary.at<uchar>(y, x) = 255;
+	}
 }
 
 void Detector::searching()
@@ -110,11 +181,39 @@ void Detector::growing(uint16_t y, uint16_t x, uint16_t label)
 				points.push(Point(point.y - 1, point.x));
 			}
 		}
-		if (point.y < 0) //down
+		if (point.y < max_y) //down
 		{
 			if (this->binary.at<uchar>(point.y + 1, point.x) == DIRTY)
 			{
 				points.push(Point(point.y + 1, point.x));
+			}
+		}
+		if (point.x > 0 && point.y > 0) //left_up
+		{
+			if (this->binary.at<uchar>(point.y - 1, point.x - 1) == DIRTY)
+			{
+				points.push(Point(point.y - 1, point.x - 1));
+			}
+		}
+		if (point.x < max_x && point.y > 0) //right_up
+		{
+			if (this->binary.at<uchar>(point.y - 1, point.x + 1) == DIRTY)
+			{
+				points.push(Point(point.y - 1, point.x + 1));
+			}
+		}
+		if (point.x > 0 && point.y < max_y) //left_down
+		{
+			if (this->binary.at<uchar>(point.y + 1, point.x - 1) == DIRTY)
+			{
+				points.push(Point(point.y + 1, point.x - 1));
+			}
+		}
+		if (point.x < max_x && point.y < max_y) //right_down
+		{
+			if (this->binary.at<uchar>(point.y + 1, point.x + 1) == DIRTY)
+			{
+				points.push(Point(point.y + 1, point.x + 1));
 			}
 		}
 	}
@@ -160,9 +259,13 @@ void Detector::sorting()
 				}
 			}
 
+			(*iter).xmin = min_x;
+			(*iter).xmax = max_x;
+			(*iter).ymin = min_y;
+			(*iter).ymax = max_y;
 			(*iter).width = max_x - min_x > 1 ? max_x - min_x : 1;			// 宽度
 			(*iter).height = max_y - min_y > 1 ? max_y - min_y : 1;			// 高度
-			(*iter).aspect = (double)(*iter).width / (double)(*iter).height;// 长宽比
+			(*iter).aspect = (double_t)(*iter).width / (double_t)(*iter).height;// 长宽比
 
 			if ((*iter).aspect > this->param.dirty_aspect_thres || 1 / (*iter).aspect > this->param.dirty_aspect_thres)
 			{
@@ -175,4 +278,9 @@ void Detector::sorting()
 			++iter;
 		}
 	}
+}
+
+cv::Mat& Detector::get_binary()
+{
+	return this->binary;
 }
