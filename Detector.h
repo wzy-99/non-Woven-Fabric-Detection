@@ -29,6 +29,12 @@ struct Param
 	double_t canny_thres_2;			// canny算子的阈值2
 	uint16_t close_block_size;		// 闭运算核大小
 	uint16_t close_iteration;		// 闭运算迭代次数
+	double_t homo_gamma_high;		// 同态滤波高频增益
+	double_t homo_gamma_low;		// 同源滤波低频增益
+	double_t homo_constant;			// 同态滤波常量
+	uint16_t median_size;			// 中值滤波大小
+	uint16_t sobel_thres_x;			// sobel算子X阈值
+	uint16_t sobel_thres_y;			// sobel算子Y阈值
 
 	void operator=(const Param& param)
 	{
@@ -38,6 +44,12 @@ struct Param
 		this->canny_thres_2 = param.canny_thres_2;
 		this->close_block_size = param.close_block_size;
 		this->close_iteration = param.close_iteration;
+		this->homo_gamma_high = param.homo_gamma_high;
+		this->homo_gamma_low = param.homo_gamma_low;
+		this->homo_constant = param.homo_constant;
+		this->median_size = param.median_size;
+		this->sobel_thres_x = param.sobel_thres_x;
+		this->sobel_thres_y = param.sobel_thres_y;
 	}
 };
 
@@ -105,12 +117,16 @@ public:
 
 	// get data
 	cv::Mat& get_binary();
+	cv::Mat& get_homo();
 
 private:
 	// local variable
 	cv::Mat img;
 	cv::Mat gray;
 	cv::Mat binary;
+	cv::Mat homo;
+	cv::Mat median;
+	cv::Mat grad;
 	std::vector<Detection> detections;
 
 	// inner fuction
@@ -118,6 +134,8 @@ private:
 	void searching();									// 搜索种子点
 	void growing(uint16_t, uint16_t, uint16_t);			// 区域生长
 	void sorting();										// 结果分类
+
+	void homo_filter();									// 同态滤波
+	void median_filter();								// 中值滤波
+	void gradient();									// 梯度计算
 };
-
-
