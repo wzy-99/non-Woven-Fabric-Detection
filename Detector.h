@@ -25,6 +25,7 @@ struct Param
 {
 	uint16_t dirty_block_size;		// 污染物的大小阈值
 	double_t dirty_aspect_thres;	// 污染物的长宽比阈值
+	double_t dirty_area_thres;		// 污染物的面积比阈值
 	double_t canny_thres_1;			// canny算子的阈值1
 	double_t canny_thres_2;			// canny算子的阈值2
 	uint16_t close_block_size;		// 闭运算核大小
@@ -32,9 +33,11 @@ struct Param
 	double_t homo_gamma_high;		// 同态滤波高频增益
 	double_t homo_gamma_low;		// 同源滤波低频增益
 	double_t homo_constant;			// 同态滤波常量
+	double_t homo_gain;				// 同态滤波增益
 	uint16_t median_size;			// 中值滤波大小
 	uint16_t sobel_thres_x;			// sobel算子X阈值
 	uint16_t sobel_thres_y;			// sobel算子Y阈值
+	uint16_t threshold;				// 阈值分割阈值
 
 	void operator=(const Param& param)
 	{
@@ -47,9 +50,11 @@ struct Param
 		this->homo_gamma_high = param.homo_gamma_high;
 		this->homo_gamma_low = param.homo_gamma_low;
 		this->homo_constant = param.homo_constant;
+		this->homo_gain = param.homo_gain;
 		this->median_size = param.median_size;
 		this->sobel_thres_x = param.sobel_thres_x;
 		this->sobel_thres_y = param.sobel_thres_y;
+		this->threshold = param.threshold;
 	}
 };
 
@@ -78,6 +83,7 @@ struct Detection
 	{
 		this->type = 0;
 		this->measure = 0;
+		this->iou = 0.0;
 		this->aspect = 0.0;
 		this->width = 0;
 		this->height = 0;
@@ -92,6 +98,7 @@ struct Detection
 	uint16_t width;								// 宽度
 	uint16_t height;							// 长度
 	uint16_t xmin, xmax, ymin, ymax;			// 左上右下
+	double_t iou;								// 面积比
 	double_t aspect;							// 长宽比
 	std::vector<Point> area;					// 连通域
 };
@@ -107,35 +114,47 @@ public:
 	Param param;
 
 	// class base fuction
-	Detector();
 	Detector(Param& param);
-	~Detector();
 
 	// interface fuction
 	void set(Param& param);
-	std::vector<Detection>& detect(cv::Mat&);
 
-	// get data
-	cv::Mat& get_binary();
-	cv::Mat& get_homo();
+	// detect fuction
+	void detect(cv::Mat& im);								// 检测所有
+	std::vector<Detection>& detect_sundry(cv::Mat& im);		// 检测杂物
+	cv::UMat& detect_crease(cv::Mat& im);					// 检测折痕
+
+	// get result
+	std::vector<Detection>& get_sundry();					// 获取检测杂物结果
+	cv::UMat& get_crease();									// 获取检测折痕结果
+
+	// get temp data for debug
+	cv::UMat& get_gray();
+	cv::UMat& get_canny();
+	cv::UMat& get_binary();
+	cv::UMat& get_homo();
+	cv::UMat& get_median();
+	cv::UMat& get_grad();
 
 private:
 	// local variable
-	cv::Mat img;
-	cv::Mat gray;
-	cv::Mat binary;
-	cv::Mat homo;
-	cv::Mat median;
-	cv::Mat grad;
+	cv::UMat img;
+	cv::UMat gray;
+	cv::UMat canny;
+	cv::UMat closed;
+	cv::UMat resized;
+	cv::UMat homo;
+	cv::UMat median;
+	cv::UMat grad;
 	std::vector<Detection> detections;
 
 	// inner fuction
-	void segmenting();									// 分割图像
+	void canny_op();									// 边缘提取
+	void close_op();									// 闭运算
 	void searching();									// 搜索种子点
-	void growing(uint16_t, uint16_t, uint16_t);			// 区域生长
+	void growing(cv::Mat&, uint16_t, uint16_t, uint16_t);// 区域生长
 	void sorting();										// 结果分类
-
 	void homo_filter();									// 同态滤波
 	void median_filter();								// 中值滤波
-	void gradient();									// 梯度计算
+	void sobel_op();									// 梯度计算
 };
